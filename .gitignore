@@ -1,4 +1,5 @@
 .generated/
+.tools/
 artifacts/
 target/
 vendor/

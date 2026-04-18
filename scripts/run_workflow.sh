@@ -1,54 +1,82 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------
 # run_workflow.sh <path/to/program.cairo> [--args "<arguments>"]
-#                                         [--skip-recursive]
+#                                         [--skip-prove]
+#                                         [--classical]
+#                                         [--skip-env-check]
 #
-# Top-level entry point:
-#   1. Base pipeline  (build → execute → prove → verify)
-#   2. Recursive pipeline (convert proof → verifier execute → prove → verify)
+# Top-level entry point.  Runs both phases:
+#   Phase 1  scarb execute
+#   Phase 2  prove + verify
+#
+# Proving modes:
+#   (default)    recursive: scarb execute --target bootloader → recursive_prover
+#   --classical  classical: scarb execute --target standalone → scarb prove/verify
+#   --skip-prove execute only, no proving
 #
 # Examples:
-#   ./scripts/run_workflow.sh programs/fibonacci.cairo --args "10"
-#   ./scripts/run_workflow.sh programs/fibonacci.cairo --args "10" --skip-recursive
+#   bash scripts/run_workflow.sh programs/fibonacci.cairo --args "10"
+#   bash scripts/run_workflow.sh programs/fibonacci.cairo --args "10" --classical
+#   bash scripts/run_workflow.sh programs/fibonacci.cairo --args "10" --skip-prove
 # ---------------------------------------------------------------
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-# ---- Parse arguments ----
 SOURCE_FILE=""
 PROGRAM_ARGS=""
-SKIP_RECURSIVE=false
+SKIP_PROVE=false
+SKIP_CHECK=false
+CLASSICAL=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --args) PROGRAM_ARGS="$2"; shift 2 ;;
-        --skip-recursive) SKIP_RECURSIVE=true; shift ;;
+        --args)           PROGRAM_ARGS="$2"; shift 2 ;;
+        --skip-prove)     SKIP_PROVE=true; shift ;;
+        --classical)      CLASSICAL=true; shift ;;
+        --skip-env-check) SKIP_CHECK=true; shift ;;
         *)
             [[ -z "${SOURCE_FILE}" ]] || die "Unexpected argument: $1"
             SOURCE_FILE="$1"; shift ;;
     esac
 done
-[[ -n "${SOURCE_FILE}" ]] || die "Usage: $0 <path/to/program.cairo> [--args \"...\"] [--skip-recursive]"
+[[ -n "${SOURCE_FILE}" ]] || die "Usage: $0 <path/to/program.cairo> [--args \"...\"] [--skip-prove] [--classical] [--skip-env-check]"
 
 # ================================================================
-# Phase 1 — Base pipeline
+# Phase 0 — Environment check
 # ================================================================
-info "========== Phase 1: Base pipeline =========="
+if [[ "${SKIP_CHECK}" == true ]]; then
+    info "Skipping environment check (--skip-env-check)."
+else
+    info "========== Phase 0: Environment check =========="
+    if ! bash "${SCRIPT_DIR}/check_env.sh"; then
+        die "Environment check failed. Fix the issues above or re-run with --skip-env-check."
+    fi
+    info ""
+fi
 
-# run_base_pipeline.sh exports PROGRAM_ID, RUN_DIR, PROOF_FILE, EXEC_ID, PKG_DIR
-source "${SCRIPT_DIR}/run_base_pipeline.sh" "${SOURCE_FILE}" ${PROGRAM_ARGS:+--args "${PROGRAM_ARGS}"}
+# ================================================================
+# Phase 1 — Execute pipeline
+# ================================================================
+info "========== Phase 1: Execute pipeline =========="
+source "${SCRIPT_DIR}/run_execute_pipeline.sh" "${SOURCE_FILE}" \
+    ${PROGRAM_ARGS:+--args "${PROGRAM_ARGS}"}
 
 # ================================================================
-# Phase 2 — Recursive pipeline (optional)
+# Phase 2 — Prove pipeline (optional)
 # ================================================================
-if [[ "${SKIP_RECURSIVE}" == true ]]; then
-    info "Skipping recursive pipeline (--skip-recursive)."
+if [[ "${SKIP_PROVE}" == true ]]; then
+    info "Skipping prove pipeline (--skip-prove)."
+elif [[ "${CLASSICAL}" == true ]]; then
+    info ""
+    info "========== Phase 2: Classical prove pipeline (scarb prove + verify) =========="
+    export PROGRAM_ID RUN_DIR PKG_DIR PROGRAM_ARGS
+    bash "${SCRIPT_DIR}/run_classical_prove_pipeline.sh"
 else
     info ""
-    info "========== Phase 2: Recursive pipeline =========="
-    export PROGRAM_ID RUN_DIR PKG_DIR
-    bash "${SCRIPT_DIR}/run_recursive_pipeline.sh"
+    info "========== Phase 2: Recursive prove pipeline =========="
+    export PROGRAM_ID RUN_DIR PROVER_INPUT
+    bash "${SCRIPT_DIR}/run_prove_pipeline.sh"
 fi
 
 # ================================================================

@@ -3,8 +3,8 @@
 # prepare_program.sh <path/to/program.cairo>
 #
 # Generates a self-contained Scarb package under .generated/
-# that wraps the supplied Cairo source so it can be built,
-# executed and proved with the standard scarb toolchain.
+# that wraps the supplied Cairo source so it can be built and
+# executed with the standard scarb toolchain.
 # ---------------------------------------------------------------
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,18 +23,14 @@ info "Preparing package for '${PROGRAM_ID}' in ${PKG_DIR}"
 rm -rf "${PKG_DIR}"
 mkdir -p "${PKG_DIR}/src"
 
-# Stamp out Scarb.toml from template
-sed "s/{{PROGRAM_ID}}/${PROGRAM_ID}/g" \
+sed -e "s/{{PROGRAM_ID}}/${PROGRAM_ID}/g" \
+    -e "s/{{CAIRO_EXECUTE_VERSION}}/${CAIRO_EXECUTE_VERSION}/g" \
     "${TEMPLATES_DIR}/Scarb.toml.tpl" > "${PKG_DIR}/Scarb.toml"
 
-# Stable lib.cairo wrapper
 cp "${TEMPLATES_DIR}/lib.cairo.tpl" "${PKG_DIR}/src/lib.cairo"
-
-# Inject the user source as the canonical module
 cp "${SOURCE_FILE}" "${PKG_DIR}/src/program.cairo"
 
-# Quick build check
-info "Building package…"
-(cd "${PKG_DIR}" && scarb build) || die "Build failed for ${PROGRAM_ID}"
+info "Building package with scarb ${SCARB_VERSION}…"
+(cd "${PKG_DIR}" && scarb_run build) || die "Build failed for ${PROGRAM_ID}"
 
 info "Package ready: ${PKG_DIR}"

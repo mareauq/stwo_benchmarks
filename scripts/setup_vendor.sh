@@ -2,35 +2,37 @@
 # ---------------------------------------------------------------
 # setup_vendor.sh
 #
-# Clones / updates the pinned version of stwo-cairo into vendor/.
-# Only needs to be run once (or when upgrading the pinned version).
+# Clones stwo-circuits into vendor/stwo-circuits at the pinned
+# revision.  Idempotent — skips if already present at the right rev.
 # ---------------------------------------------------------------
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-STWO_CAIRO_VERSION="v1.2.2"
-STWO_CAIRO_REPO="https://github.com/starkware-libs/stwo-cairo.git"
-VENDOR_DIR="${REPO_ROOT}/vendor/stwo-cairo"
+VENDOR_DIR="${REPO_ROOT}/vendor/stwo-circuits"
 
-if [[ -d "${VENDOR_DIR}" ]]; then
-    info "Vendor directory already exists: ${VENDOR_DIR}"
-    CURRENT_TAG="$(cd "${VENDOR_DIR}" && git describe --tags --exact-match 2>/dev/null || echo 'unknown')"
-    if [[ "${CURRENT_TAG}" == "${STWO_CAIRO_VERSION}" ]]; then
-        info "Already at ${STWO_CAIRO_VERSION}. Nothing to do."
-        exit 0
+if [[ -d "${VENDOR_DIR}/.git" ]]; then
+    CURRENT="$(cd "${VENDOR_DIR}" && git rev-parse HEAD)"
+    if [[ "${STWO_CIRCUITS_REV}" == "main" ]]; then
+        info "vendor/stwo-circuits already cloned (${CURRENT:0:8}). Pulling latest main…"
+        (cd "${VENDOR_DIR}" && git fetch origin main && git checkout origin/main --detach)
+    else
+        EXPECTED="$(cd "${VENDOR_DIR}" && git rev-parse "${STWO_CIRCUITS_REV}" 2>/dev/null || echo "")"
+        if [[ "${CURRENT}" == "${EXPECTED}" ]]; then
+            info "vendor/stwo-circuits already at ${STWO_CIRCUITS_REV} (${CURRENT:0:8}). Skipping."
+            exit 0
+        fi
+        info "Checking out ${STWO_CIRCUITS_REV}…"
+        (cd "${VENDOR_DIR}" && git fetch origin && git checkout "${STWO_CIRCUITS_REV}" --detach)
     fi
-    info "Current tag: ${CURRENT_TAG}. Updating to ${STWO_CAIRO_VERSION}…"
-    (cd "${VENDOR_DIR}" && git fetch --tags && git checkout "${STWO_CAIRO_VERSION}")
 else
-    info "Cloning stwo-cairo ${STWO_CAIRO_VERSION} into ${VENDOR_DIR}…"
-    mkdir -p "$(dirname "${VENDOR_DIR}")"
-    git clone --depth 1 --branch "${STWO_CAIRO_VERSION}" \
-        "${STWO_CAIRO_REPO}" "${VENDOR_DIR}"
+    info "Cloning stwo-circuits into vendor/stwo-circuits…"
+    mkdir -p "${REPO_ROOT}/vendor"
+    git clone https://github.com/starkware-libs/stwo-circuits.git "${VENDOR_DIR}"
+    if [[ "${STWO_CIRCUITS_REV}" != "main" ]]; then
+        (cd "${VENDOR_DIR}" && git checkout "${STWO_CIRCUITS_REV}" --detach)
+    fi
 fi
 
-# Quick sanity: verifier workspace must exist
-[[ -f "${VENDOR_DIR}/stwo_cairo_verifier/Scarb.toml" ]] \
-    || die "Verifier workspace not found after clone."
-
-info "Vendor setup complete: ${VENDOR_DIR} @ ${STWO_CAIRO_VERSION}"
+REV="$(cd "${VENDOR_DIR}" && git rev-parse --short HEAD)"
+info "vendor/stwo-circuits ready at ${REV}"
