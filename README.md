@@ -66,8 +66,8 @@ Chaque run écrit un dossier sous `artifacts/programs/<program_id>/runs/<timesta
 | `inputs/arguments.txt` | arguments passés au programme |
 | `outputs/program_output.txt` | sortie publique du programme |
 | `cairo_vm/prover_input.json` | entrée du prover Cairo générée par `scarb execute` |
-| `base_proof/proof.json` | preuve Cairo de base exportée par `recursive_prover` |
-| `recursive_proof/proof.json` | preuve récursive sérialisée + métriques |
+| `base_proof/proof.json` | export JSON complet de la preuve Cairo de base |
+| `recursive_proof/proof.json` | preuve récursive sérialisée en hex + métriques |
 | `recursive_proof/vk.json` | clé de vérification du circuit récursif |
 | `logs/` | stdout/stderr des différentes phases |
 | `metrics/summary.json` | résumé des timings et tailles |
@@ -80,6 +80,10 @@ Notes sur les formats :
   utilisée par `recursive_prover`.
 - `recursive_proof/proof.json` contient la preuve récursive sérialisée en hex et
   les métriques associées.
+- Les métriques `cairo_proof_bytes` et `proof_bytes` mesurent la **taille utile
+  de la preuve** côté protocole. Les fichiers JSON exportés sur disque sont plus
+  gros : la preuve récursive est stockée en hex (en pratique ~2x la taille
+  binaire), et l'export JSON de la preuve de base est encore plus volumineux.
 
 ## Ajouter un benchmark
 
@@ -233,18 +237,18 @@ Utile pour observer le coût des gros outputs publics.
 
 ### fibonacci
 
-| n | Cairo steps | Base proof | Recursive proof | Verify | Base size | Recursive size |
-|---|-------------|------------|-----------------|--------|-----------|----------------|
-| 131 072 | 1 840 624 | ~38s | ~22s | 100ms | ~1.1 MB | ~61 KB |
+| n | Cairo steps | Base proof | Recursive proof | Verify | Base payload | Base JSON file | Recursive payload | Recursive JSON file |
+|---|-------------|------------|-----------------|--------|--------------|----------------|-------------------|---------------------|
+| 131 072 | 1 840 624 | ~38s | ~22s | 100ms | 1 135 772 B | 5 387 001 B | 61 220 B | 122 595 B |
 
 ### crypto
 
-| (n_hash, n_exp) | Cairo steps | Builtins (range_check / poseidon) | Base proof | Recursive proof | Verify | Base size | Recursive size |
-|-----------------|-------------|-----------------------------------|------------|-----------------|--------|-----------|----------------|
-| (256, 256) | 118 911 | 27 151 / 512 | ~30s | ~31s | 87ms | ~1.4 MB | ~61 KB |
-| (2048, 256) | 163 711 | 28 943 / 4 096 | ~42s | ~31s | 3ms | ~1.4 MB | ~61 KB |
-| (16384, 256) | 522 111 | 43 279 / 32 768 | ~158s | ~32s | 88ms | ~1.4 MB | ~61 KB |
-| (256, 2048) | 772 991 | 208 143 / 512 | ~32s | ~31s | 160ms | ~1.4 MB | ~61 KB |
+| (n_hash, n_exp) | Cairo steps | Builtins (range_check / poseidon) | Base proof | Recursive proof | Verify | Base payload | Base JSON file | Recursive payload | Recursive JSON file |
+|-----------------|-------------|-----------------------------------|------------|-----------------|--------|--------------|----------------|-------------------|---------------------|
+| (256, 256) | 118 911 | 27 151 / 512 | ~30s | ~31s | 87ms | 1 483 548 B | 6 358 809 B | 61 220 B | 122 594 B |
+| (2048, 256) | 163 711 | 28 943 / 4 096 | ~42s | ~31s | 3ms | 1 483 548 B | 6 333 732 B | 61 220 B | 122 593 B |
+| (16384, 256) | 522 111 | 43 279 / 32 768 | ~158s | ~32s | 88ms | 1 483 548 B | 6 345 880 B | 61 220 B | 122 595 B |
+| (256, 2048) | 772 991 | 208 143 / 512 | ~32s | ~31s | 160ms | 1 483 548 B | 6 341 396 B | 61 220 B | 122 595 B |
 
 Observations :
 
@@ -255,6 +259,10 @@ Observations :
   Elle dépend surtout de la configuration du circuit récursif et de ses
   paramètres de preuve (PCS/FRI, format de sérialisation, structure du circuit).
   Si ces paramètres changent, la taille de `recursive_proof` peut changer.
+- **Le fichier `recursive_proof/proof.json` est plus gros que `proof_bytes`.**
+  Dans les runs ci-dessus, le payload récursif vaut 61 220 octets, mais le
+  fichier JSON sur disque vaut ~122.6 KB car la preuve est encodée en hex et
+  accompagnée de métadonnées.
 - **La preuve de base est le vrai goulot d'étranglement.**
   C'est elle qui croît avec les steps du programme Cairo.
 - **Augmenter `n_hash` coûte surtout en builtin Poseidon.**
