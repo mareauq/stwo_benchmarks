@@ -111,7 +111,7 @@ docs/                    Notes et documentation de référence
 
 | Script | Rôle |
 |--------|------|
-| `setup_vendor.sh` | Clone `stwo-circuits` au commit/révision pin |
+| `setup_vendor.sh` | Clone `stwo-circuits` au commit pin compatible |
 | `build_prover.sh` | Compile et installe `recursive_prover` dans `.tools/bin/` |
 | `prepare_program.sh` | Génère un package Scarb autour d'un fichier `.cairo` |
 | `run_execute_pipeline.sh` | Lance `scarb execute` et archive les sorties |
@@ -180,10 +180,16 @@ Les versions critiques sont centralisées dans `scripts/common.sh` et
 |-----------|--------------------|
 | `stwo` | 2.2.0 (crates.io) |
 | `stwo-cairo` | git rev `0a5e70b7` |
-| `stwo-circuits` | vendored (`main`) |
+| `stwo-circuits` | vendored, commit `b0ecaf8` |
 | Rust nightly | `nightly-2025-06-23` |
 | `scarb` | `nightly-2026-04-15` |
 | `cairo_execute` | 2.17.0 |
+
+Note sur `stwo-circuits` :
+le projet évolue encore rapidement et son API Rust peut changer sur `main`
+sans rester compatible avec `recursive_prover`. Ce repo se contraint donc à un
+commit vendorié et fixé (`b0ecaf8`) pour garantir que `setup_vendor.sh`,
+`build_prover.sh` et tout le pipeline restent reproductibles.
 
 ## Programmes de benchmark
 

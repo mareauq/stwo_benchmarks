@@ -11,8 +11,9 @@ ARTIFACTS_DIR="${REPO_ROOT}/artifacts/programs"
 # Pinned versions — single source of truth
 # ================================================================
 
-# stwo-circuits tag or commit used by setup_vendor.sh.
-STWO_CIRCUITS_REV="${STWO_CIRCUITS_REV:-main}"
+# stwo-circuits commit used by setup_vendor.sh.
+# This revision is known to be compatible with crates/recursive_prover.
+STWO_CIRCUITS_REV="${STWO_CIRCUITS_REV:-b0ecaf8fd37ed0b38fa80e62419c8e847def5fe3}"
 
 # Rust nightly required by stwo-circuits and the recursive prover.
 RUST_NIGHTLY="${RUST_NIGHTLY:-nightly-2025-06-23}"

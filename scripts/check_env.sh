@@ -29,6 +29,7 @@ echo "Expected versions:"
 echo "  Rust nightly          ${RUST_NIGHTLY}"
 echo "  scarb                 ${SCARB_VERSION}"
 echo "  cairo_execute         ${CAIRO_EXECUTE_VERSION}"
+echo "  stwo-circuits         ${STWO_CIRCUITS_REV:0:8}"
 echo "  recursive_prover      ${RECURSIVE_PROVER_BIN}"
 echo ""
 
@@ -77,8 +78,12 @@ echo ""
 echo "[Vendored dependencies]"
 VENDOR_DIR="${REPO_ROOT}/vendor/stwo-circuits"
 if [[ -d "${VENDOR_DIR}" ]]; then
-    REV="$(cd "${VENDOR_DIR}" && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-    ok "vendor/stwo-circuits present (${REV})"
+    REV="$(cd "${VENDOR_DIR}" && git rev-parse HEAD 2>/dev/null || echo 'unknown')"
+    if [[ "${REV}" == "${STWO_CIRCUITS_REV}" ]]; then
+        ok "vendor/stwo-circuits present (${REV:0:8})"
+    else
+        ko "vendor/stwo-circuits at ${REV:0:8}, expected ${STWO_CIRCUITS_REV:0:8} (run scripts/setup_vendor.sh)"
+    fi
 else
     ko "vendor/stwo-circuits missing (run scripts/setup_vendor.sh)"
 fi
