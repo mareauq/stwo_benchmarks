@@ -109,6 +109,7 @@ vendor/                  Dépendances vendoriées
 .tools/                  Binaire installé de recursive_prover
 artifacts/               Artefacts des runs
 docs/                    Notes et documentation de référence
+webapp/                  Web app pédagogique autour du pipeline (optionnelle)
 ```
 
 ## Scripts principaux
@@ -267,6 +268,27 @@ Observations :
   C'est elle qui croît avec les steps du programme Cairo.
 - **Augmenter `n_hash` coûte surtout en builtin Poseidon.**
   Augmenter `n_exp` coûte surtout en range checks liés au `u256`.
+
+## Webapp pédagogique (optionnelle)
+
+Le dossier `webapp/` contient une **couche additionnelle** construite par-dessus
+le workbench : éditeur Cairo dans le navigateur, bouton `Exécuter et prouver`,
+affichage interactif de la sortie, de la preuve, des logs et des métriques.
+
+Elle n'est **pas** une interface obligatoire :
+
+- le workbench s'utilise exactement comme avant en ligne de commande
+  (`scripts/run_workflow.sh`, programmes dans `programs/`, artefacts sous
+  `artifacts/`) ;
+- installer ou lancer la webapp n'est jamais requis pour reproduire les
+  benchmarks ;
+- la webapp n'altère ni `scripts/`, ni `programs/`, ni les artefacts existants.
+  Elle se contente de piloter `run_workflow.sh` à la demande et de relire les
+  artefacts produits.
+
+Pour l'installation, l'architecture détaillée et l'usage de la webapp :
+
+**→ voir [`webapp/README.md`](webapp/README.md).**
 
 ## Références
 

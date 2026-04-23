@@ -3,3 +3,23 @@
 artifacts/
 target/
 vendor/
+
+# Programme transient écrit par la webapp (non versionné)
+programs/playground.cairo
+
+# Webapp — backend
+webapp/backend/.venv/
+webapp/backend/**/__pycache__/
+webapp/backend/**/*.pyc
+
+# Webapp — frontend
+webapp/frontend/node_modules/
+webapp/frontend/.next/
+webapp/frontend/out/
+webapp/frontend/.turbo/
+webapp/frontend/dist/
+webapp/frontend/tsconfig.tsbuildinfo
+
+# Local env files
+webapp/**/.env
+webapp/**/.env.local
